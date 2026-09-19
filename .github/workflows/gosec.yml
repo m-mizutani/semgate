@@ -1,0 +1,23 @@
+name: gosec
+
+on: [push]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  gosec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run gosec security scanner
+        uses: securego/gosec@master
+        with:
+          # Findings are reported through the GitHub Security tab, so the scan
+          # itself does not fail the job.
+          args: "-no-fail -fmt sarif -out results.sarif ./..."
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
