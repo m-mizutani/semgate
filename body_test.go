@@ -116,8 +116,8 @@ func testOversizeActions(t *testing.T, length int64) {
 func TestBodyRejectNotTriggered(t *testing.T) {
 	t.Run("stream below limit before timeout", func(t *testing.T) {
 		pr, pw := io.Pipe()
-		t.Cleanup(func() { pw.Close() })
-		go pw.Write([]byte("hello"))
+		t.Cleanup(func() { _ = pw.Close() })
+		go func() { _, _ = pw.Write([]byte("hello")) }()
 		r := httptest.NewRequest(http.MethodPost, "/", unknownLength{pr})
 		r.Header.Set("Content-Type", "text/plain")
 
@@ -194,7 +194,7 @@ func TestBodyInvalidUTF8(t *testing.T) {
 
 func TestBodyStreaming(t *testing.T) {
 	pr, pw := io.Pipe()
-	go pw.Write([]byte("0123456789"))
+	go func() { _, _ = pw.Write([]byte("0123456789")) }()
 	r := httptest.NewRequest(http.MethodPost, "/", unknownLength{pr})
 	r.Header.Set("Content-Type", "text/plain")
 
@@ -205,8 +205,8 @@ func TestBodyStreaming(t *testing.T) {
 	mw := g.Noul("q", func(w http.ResponseWriter, r *http.Request, _ semgate.NoulAnswer, _ http.Handler) {
 		// The rest of the body is written only after the evaluation.
 		go func() {
-			pw.Write(bytes.Repeat([]byte("x"), 30))
-			pw.Close()
+			_, _ = pw.Write(bytes.Repeat([]byte("x"), 30))
+			_ = pw.Close()
 		}()
 		read, readErr = io.ReadAll(r.Body)
 	})

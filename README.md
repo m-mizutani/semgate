@@ -160,9 +160,13 @@ Invalid arguments to `semgate.Noul` / `Choice` / `Score`, the `Gate` methods and
 
 ```
 go test -race ./...
+golangci-lint run ./...
+gosec ./...
 ```
 
 `TestEvaluateLive` in `providers/typesafe` calls the real API and runs only when `TEST_TYPESAFE_API_KEY` is set.
+
+GitHub Actions runs the same checks on every push (`test`, `lint`), plus `gosec` and `trivy`, whose findings appear in the repository's Security tab.
 
 ## License
 

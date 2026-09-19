@@ -1,0 +1,18 @@
+name: lint
+
+on: [push]
+
+permissions:
+  contents: read
+
+jobs:
+  golangci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.13.2
