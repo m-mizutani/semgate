@@ -101,6 +101,10 @@ r.With(guardAndRoute).Post("/assist", searchHandler) // two questions, one API c
 
 Stacking middlewares on one route evaluates once per middleware. Use `g.Ask` to evaluate several questions in one call.
 
+## Examples
+
+[`examples/security`](examples/security/main.go) is a runnable server that blocks injection attempts. Its `newServer` holds the whole example in one function: `semgate.New`, one `Noul` question about the request, the decision, and the route the guard sits on.
+
 ## Answers
 
 | Question | Answer type | Fields |
@@ -164,7 +168,7 @@ golangci-lint run ./...
 gosec ./...
 ```
 
-`TestEvaluateLive` in `providers/typesafe` calls the real API and runs only when `TEST_TYPESAFE_API_KEY` is set.
+`TestEvaluateLive` in `providers/typesafe` and `TestGuardLive` in `examples/security` call the real API and run only when `TEST_TYPESAFE_API_KEY` is set. `TestGuardLive` requires each attack payload to be answered 403 and each benign request to reach the handler.
 
 GitHub Actions runs the same checks on every push (`test`, `lint`), plus `gosec` and `trivy`, whose findings appear in the repository's Security tab.
 
