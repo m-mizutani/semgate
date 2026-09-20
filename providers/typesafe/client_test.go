@@ -131,6 +131,37 @@ func TestEvaluateResponse(t *testing.T) {
 	gt.String(t, string(resp.Answers["q0"])).Equal(`{"type":"noul","noul":0.99}`)
 }
 
+func TestEvaluateUsage(t *testing.T) {
+	const answers = `"answers":{"q0":{"type":"noul","noul":0.99}}`
+	cases := map[string]struct {
+		body    string
+		want    providers.Usage
+		wantErr bool
+	}{
+		"reported":       {okBody, providers.Usage{InputTokens: 360, OutputTokens: 39}, false},
+		"absent":         {`{"model":"jev-latest",` + answers + `}`, providers.Usage{}, false},
+		"zero":           {`{` + answers + `,"usage":{"input_tokens":0,"output_tokens":0}}`, providers.Usage{}, false},
+		"negative":       {`{` + answers + `,"usage":{"input_tokens":-1,"output_tokens":39}}`, providers.Usage{InputTokens: -1, OutputTokens: 39}, false},
+		"not an object":  {`{` + answers + `,"usage":"oops"}`, providers.Usage{}, true},
+		"not an integer": {`{` + answers + `,"usage":{"input_tokens":1.5,"output_tokens":39}}`, providers.Usage{}, true},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, rt, _ := newServer(t, respondJSON(tc.body))
+			c, err := typesafe.New("test-key", typesafe.WithHTTPClient(&http.Client{Transport: rt}))
+			gt.NoError(t, err).Required()
+
+			resp, err := c.Evaluate(context.Background(), sampleRequest())
+			if tc.wantErr {
+				gt.Error(t, err)
+				return
+			}
+			gt.NoError(t, err).Required()
+			gt.Value(t, resp.Usage).Equal(tc.want)
+		})
+	}
+}
+
 func TestEvaluateAPIError(t *testing.T) {
 	for _, status := range []int{http.StatusUnauthorized, http.StatusUnprocessableEntity, http.StatusTooManyRequests, 529} {
 		t.Run(fmt.Sprint(status), func(t *testing.T) {

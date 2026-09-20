@@ -12,6 +12,25 @@ import (
 // with the Answer method of the question.
 type Answers struct {
 	values map[Question]any // NoulAnswer, ChoiceAnswer or ScoreAnswer keyed by the question
+	usage  Usage
+}
+
+// Usage is the number of tokens one evaluation consumed. The questions of one
+// Gate.Ask are evaluated in a single provider call, so one evaluation reports
+// one Usage however many questions it asks.
+type Usage struct {
+	InputTokens  int
+	OutputTokens int
+}
+
+// Usage returns the tokens the evaluation consumed. It is the zero value if
+// the provider reports no token count, which is not an evaluation failure:
+// the count is not used to decide anything. It panics if ans is nil.
+func (ans *Answers) Usage() Usage {
+	if ans == nil {
+		panic("semgate: Usage requires non-nil Answers")
+	}
+	return ans.usage
 }
 
 // NoulAnswer is the answer to a yes/no question.
