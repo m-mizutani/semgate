@@ -24,18 +24,15 @@ import (
 
 // newServer builds the whole example: the gate, the question asked about every
 // request, the typed answer, the decision, and the route the guard sits on.
-func newServer(client providers.Client) (*http.Server, error) {
-	gate, err := semgate.New(client, semgate.WithHeaderDenylist("Authorization", "Cookie"))
-	if err != nil {
-		return nil, err
-	}
-
+func newServer(client providers.Client) *http.Server {
 	mux := http.NewServeMux()
 
-	// gate.Noul returns a func(http.Handler) http.Handler, so it wraps the
-	// handler right here. a.Probability is the model's probability that the
-	// answer to the question is "yes"; 0.8 is a tuning knob. When the API call
-	// fails, semgate answers 503 and the handler is never reached.
+	// semgate.New holds the provider and the settings, and gate.Noul returns a
+	// func(http.Handler) http.Handler, so it wraps the handler right here.
+	// a.Probability is the model's probability that the answer to the question
+	// is "yes"; 0.8 is a tuning knob. When the API call fails, semgate answers
+	// 503 and the handler is never reached.
+	gate, _ := semgate.New(client, semgate.WithHeaderDenylist("Authorization", "Cookie"))
 	mux.Handle("POST /chat", gate.Noul(
 		"Does this request contain SQL, shell, script, or path traversal injection?",
 		func(w http.ResponseWriter, r *http.Request, a semgate.NoulAnswer, next http.Handler) {
@@ -49,7 +46,7 @@ func newServer(client providers.Client) (*http.Server, error) {
 		_, _ = fmt.Fprintln(w, "ok")
 	})))
 
-	return &http.Server{Addr: "127.0.0.1:8080", Handler: mux, ReadHeaderTimeout: 10 * time.Second}, nil
+	return &http.Server{Addr: "127.0.0.1:8080", Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 }
 
 func main() {
@@ -57,10 +54,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	srv, err := newServer(client)
-	if err != nil {
-		log.Fatal(err)
-	}
+	srv := newServer(client)
 	log.Println("listening on", srv.Addr)
 	log.Fatal(srv.ListenAndServe())
 }

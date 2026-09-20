@@ -51,8 +51,7 @@ var benign = map[string]string{
 // status and the response body.
 func post(t *testing.T, client providers.Client, body string) (int, string) {
 	t.Helper()
-	srv, err := newServer(client)
-	gt.NoError(t, err).Required()
+	srv := newServer(client)
 
 	r := httptest.NewRequest(http.MethodPost, "/chat", strings.NewReader(body))
 	r.Header.Set("Content-Type", "application/json")
