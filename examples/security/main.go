@@ -22,6 +22,11 @@ import (
 	"github.com/m-mizutani/semgate/providers/typesafe"
 )
 
+// chat answers a request that the guard let through.
+var chat = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	_, _ = fmt.Fprintln(w, "ok")
+})
+
 // newServer builds the whole example: the gate, the question asked about every
 // request, the typed answer, the decision, and the route the guard sits on.
 func newServer(client providers.Client) *http.Server {
@@ -42,9 +47,7 @@ func newServer(client providers.Client) *http.Server {
 			}
 			next.ServeHTTP(w, r)
 		},
-	)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = fmt.Fprintln(w, "ok")
-	})))
+	)(chat))
 
 	return &http.Server{Addr: "127.0.0.1:8080", Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 }
