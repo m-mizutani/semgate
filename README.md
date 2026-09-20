@@ -103,7 +103,7 @@ Stacking middlewares on one route evaluates once per middleware. Use `g.Ask` to 
 
 ## Examples
 
-[`examples/security`](examples/security) is a server with one guard in front of one route, asking whether the request is an injection attack. It also shows what a guard depends on to see the payload at all: which headers and query parameters are sent, requiring a content type whose body is evaluated, rejecting an oversize body instead of evaluating part of it, waiting for a body that arrives slowly, and failing closed when the evaluation itself fails.
+[`examples/security`](examples/security/main.go) is a runnable server that blocks injection attempts. Its `newServer` holds the whole example in one function: `semgate.New`, one `Noul` question about the request, the decision, and the route the guard sits on.
 
 ## Answers
 
