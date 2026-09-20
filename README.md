@@ -103,7 +103,7 @@ Stacking middlewares on one route evaluates once per middleware. Use `g.Ask` to 
 
 ## Examples
 
-[`examples/security`](examples/security) is a server whose routes are guarded against prompt injection, SQL injection, OS command injection, cross-site scripting, path traversal and server-side request forgery, one `Noul` question per attack class. It also shows what a guard depends on to see the payload at all: which headers and query parameters are sent, requiring a content type whose body is evaluated, rejecting an oversize body instead of evaluating part of it, waiting for a body that arrives slowly, and failing closed when the evaluation itself fails.
+[`examples/security`](examples/security) is a server with one guard in front of one route, asking whether the request is an injection attack. It also shows what a guard depends on to see the payload at all: which headers and query parameters are sent, requiring a content type whose body is evaluated, rejecting an oversize body instead of evaluating part of it, waiting for a body that arrives slowly, and failing closed when the evaluation itself fails.
 
 ## Answers
 
@@ -168,7 +168,7 @@ golangci-lint run ./...
 gosec ./...
 ```
 
-`TestEvaluateLive` in `providers/typesafe` and `TestGuardsLive` in `examples/security` call the real API and run only when `TEST_TYPESAFE_API_KEY` is set. `TestGuardsLive` requires each attack payload to be answered 403 and each benign request to reach the handler.
+`TestEvaluateLive` in `providers/typesafe` and `TestGuardLive` in `examples/security` call the real API and run only when `TEST_TYPESAFE_API_KEY` is set. `TestGuardLive` requires each attack payload to be answered 403 and each benign request to reach the handler.
 
 GitHub Actions runs the same checks on every push (`test`, `lint`), plus `gosec` and `trivy`, whose findings appear in the repository's Security tab.
 
