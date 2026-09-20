@@ -18,26 +18,26 @@ import (
 	"time"
 
 	"github.com/m-mizutani/semgate"
-	"github.com/m-mizutani/semgate/providers"
 	"github.com/m-mizutani/semgate/providers/typesafe"
 )
 
-// chat answers a request that the guard let through.
-var chat = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+// chatHandler answers a request that the guard let through.
+var chatHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 	_, _ = fmt.Fprintln(w, "ok")
 })
 
-// newServer builds the whole example: the gate, the question asked about every
-// request, the typed answer, the decision, and the route the guard sits on.
-func newServer(client providers.Client) *http.Server {
+// newServer builds the whole example: the provider, the gate, the question
+// asked about every request, the typed answer, the decision, and the route the
+// guard sits on.
+func newServer() *http.Server {
 	mux := http.NewServeMux()
 
-	// semgate.New holds the provider and the settings, and gate.Noul returns a
-	// func(http.Handler) http.Handler, so it wraps the handler right here.
-	// a.Probability is the model's probability that the answer to the question
-	// is "yes"; 0.8 is a tuning knob. When the API call fails, semgate answers
-	// 503 and the handler is never reached.
-	gate, _ := semgate.New(client, semgate.WithHeaderDenylist("Authorization", "Cookie"))
+	// gate.Noul returns a func(http.Handler) http.Handler, so it wraps chatHandler
+	// right here. a.Probability is the model's probability that the answer to
+	// the question is "yes"; 0.8 is a tuning knob. When the API call fails,
+	// semgate answers 503 and chatHandler is never reached.
+	client, _ := typesafe.New(os.Getenv("TYPESAFE_API_KEY"))
+	gate, _ := semgate.New(client)
 	mux.Handle("POST /chat", gate.Noul(
 		"Does this request contain SQL, shell, script, or path traversal injection?",
 		func(w http.ResponseWriter, r *http.Request, a semgate.NoulAnswer, next http.Handler) {
@@ -47,17 +47,13 @@ func newServer(client providers.Client) *http.Server {
 			}
 			next.ServeHTTP(w, r)
 		},
-	)(chat))
+	)(chatHandler))
 
 	return &http.Server{Addr: "127.0.0.1:8080", Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 }
 
 func main() {
-	client, err := typesafe.New(os.Getenv("TYPESAFE_API_KEY"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	srv := newServer(client)
+	srv := newServer()
 	log.Println("listening on", srv.Addr)
 	log.Fatal(srv.ListenAndServe())
 }
