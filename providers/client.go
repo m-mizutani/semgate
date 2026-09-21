@@ -51,10 +51,12 @@ type Response struct {
 	Usage Usage
 }
 
-// Usage is the number of tokens one evaluation consumed.
+// Usage is the number of tokens one evaluation consumed. Like Response, it is
+// what a provider returns, not a wire format: an implementation decodes its own
+// API into it.
 type Usage struct {
-	InputTokens  int `json:"input_tokens"`
-	OutputTokens int `json:"output_tokens"`
+	InputTokens  int
+	OutputTokens int
 }
 
 // State describes the HTTP request being evaluated.

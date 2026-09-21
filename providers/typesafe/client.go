@@ -97,7 +97,12 @@ type wireRequest struct {
 
 type wireResponse struct {
 	Answers map[string]json.RawMessage `json:"answers"`
-	Usage   providers.Usage            `json:"usage"`
+	Usage   wireUsage                  `json:"usage"`
+}
+
+type wireUsage struct {
+	InputTokens  int `json:"input_tokens"`
+	OutputTokens int `json:"output_tokens"`
 }
 
 func (c *client) Evaluate(ctx context.Context, req *providers.Request) (*providers.Response, error) {
@@ -127,5 +132,8 @@ func (c *client) Evaluate(ctx context.Context, req *providers.Request) (*provide
 	if err := json.NewDecoder(resp.Body).Decode(&w); err != nil {
 		return nil, goerr.Wrap(err, "failed to decode response", goerr.V("status", resp.StatusCode))
 	}
-	return &providers.Response{Answers: w.Answers, Usage: w.Usage}, nil
+	return &providers.Response{
+		Answers: w.Answers,
+		Usage:   providers.Usage{InputTokens: w.Usage.InputTokens, OutputTokens: w.Usage.OutputTokens},
+	}, nil
 }
