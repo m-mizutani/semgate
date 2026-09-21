@@ -43,9 +43,20 @@ type QuestionSpec struct {
 }
 
 // Response holds the raw answer object of each question, keyed by the
-// question key used in Request.Questions.
+// question key used in Request.Questions, and the tokens the evaluation
+// consumed.
 type Response struct {
 	Answers map[string]json.RawMessage
+	// Usage is the zero value if the provider reports no token count.
+	Usage Usage
+}
+
+// Usage is the number of tokens one evaluation consumed. Like Response, it is
+// what a provider returns, not a wire format: an implementation decodes its own
+// API into it.
+type Usage struct {
+	InputTokens  int
+	OutputTokens int
 }
 
 // State describes the HTTP request being evaluated.

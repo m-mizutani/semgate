@@ -163,7 +163,10 @@ func (g *Gate) evaluate(ctx context.Context, state providers.State, questions []
 		return nil, goerr.Wrap(errAnswerMissing, "provider returned no response")
 	}
 
-	ans := &Answers{values: make(map[Question]any, len(questions))}
+	ans := &Answers{
+		values: make(map[Question]any, len(questions)),
+		usage:  Usage{InputTokens: resp.Usage.InputTokens, OutputTokens: resp.Usage.OutputTokens},
+	}
 	var errs []error
 	for _, kq := range questions {
 		raw, ok := resp.Answers[kq.key]

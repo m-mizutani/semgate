@@ -115,6 +115,23 @@ Stacking middlewares on one route evaluates once per middleware. Use `g.Ask` to 
 
 Answers are new values for every request; modifying them affects nothing else.
 
+### Token usage
+
+`ans.Usage()` returns the tokens the evaluation consumed, as `semgate.Usage{InputTokens, OutputTokens}`. One `g.Ask` sends every question in one API call, so it reports one `Usage` however many questions it asks.
+
+```go
+guardAndRoute := g.Ask([]semgate.Question{injection, intent},
+    func(w http.ResponseWriter, r *http.Request, ans *semgate.Answers, next http.Handler) {
+        u := ans.Usage()
+        logger.Info("evaluated", "input_tokens", u.InputTokens, "output_tokens", u.OutputTokens)
+        // ...
+    })
+```
+
+It is the zero value if the provider reports no token count; that is not an evaluation failure, because the count decides nothing. The middlewares returned by `g.Noul`, `g.Choice` and `g.Score` pass only the answer to your function, so read the token usage through `g.Ask` — it takes a single question too.
+
+When the evaluation fails your function is not called, so no token count reaches it, even though a failed API response may already have consumed tokens.
+
 ## When the evaluation fails
 
 If the API call fails, an answer is missing, or an answer is invalid (wrong type, a Choice not among the options, a value out of its range), your function is not called. With `g.Ask`, one failed answer fails the whole evaluation, so your function can read every answer without checks. The request is answered by the evaluation error handler, which responds 503 by default:

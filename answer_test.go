@@ -1,11 +1,13 @@
 package semgate_test
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
 	"github.com/m-mizutani/gt"
 	"github.com/m-mizutani/semgate"
+	"github.com/m-mizutani/semgate/providers"
 )
 
 func TestAnswerDecoding(t *testing.T) {
@@ -111,4 +113,78 @@ func TestAnswerInvalid(t *testing.T) {
 			gt.Bool(t, called).False()
 		})
 	}
+}
+
+// answerWithUsage answers by instructions and reports usage with the answers.
+func answerWithUsage(answers map[string]string, usage providers.Usage) func(context.Context, *providers.Request) (*providers.Response, error) {
+	respond := answerByInstructions(answers)
+	return func(ctx context.Context, req *providers.Request) (*providers.Response, error) {
+		resp, err := respond(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		resp.Usage = usage
+		return resp, nil
+	}
+}
+
+func TestAnswerUsage(t *testing.T) {
+	t.Run("reported by the provider", func(t *testing.T) {
+		q := semgate.Noul("q")
+		p := &fakeProvider{respond: answerWithUsage(
+			map[string]string{"q": noulJSON(0.99)},
+			providers.Usage{InputTokens: 360, OutputTokens: 39})}
+		var got semgate.Usage
+		called := 0
+		mw := newGate(t, p).Ask([]semgate.Question{q},
+			func(_ http.ResponseWriter, _ *http.Request, ans *semgate.Answers, _ http.Handler) {
+				got, called = ans.Usage(), called+1
+			})
+		serve(mw(&downstream{}), getRequest())
+		gt.Number(t, called).Equal(1)
+		gt.Value(t, got).Equal(semgate.Usage{InputTokens: 360, OutputTokens: 39})
+	})
+
+	// One Ask sends every question in one provider call, so it reports one
+	// usage however many questions it asks.
+	t.Run("one usage for several questions", func(t *testing.T) {
+		injection := semgate.Noul("injection")
+		intent := semgate.Choice("intent", options(2))
+		risk := semgate.Score("risk", levels(3))
+		p := &fakeProvider{respond: answerWithUsage(map[string]string{
+			"injection": noulJSON(0.1),
+			"intent":    choiceJSON("o0", 0.9, map[string]float64{"o0": 0.9, "o1": 0.1}),
+			"risk":      `{"type":"score","score":1,"probabilities":{"1":1},"confidence":0.8}`,
+		}, providers.Usage{InputTokens: 512, OutputTokens: 64})}
+		var got semgate.Usage
+		called := 0
+		mw := newGate(t, p).Ask([]semgate.Question{injection, intent, risk},
+			func(_ http.ResponseWriter, _ *http.Request, ans *semgate.Answers, _ http.Handler) {
+				got, called = ans.Usage(), called+1
+			})
+		serve(mw(&downstream{}), getRequest())
+		gt.Number(t, p.calls()).Equal(1)
+		gt.Number(t, called).Equal(1)
+		gt.Value(t, got).Equal(semgate.Usage{InputTokens: 512, OutputTokens: 64})
+	})
+
+	t.Run("not reported by the provider", func(t *testing.T) {
+		q := semgate.Noul("q")
+		p := &fakeProvider{respond: answerByInstructions(map[string]string{"q": noulJSON(0.99)})}
+		var got semgate.Usage
+		d := &downstream{}
+		mw := newGate(t, p).Ask([]semgate.Question{q},
+			func(w http.ResponseWriter, r *http.Request, ans *semgate.Answers, next http.Handler) {
+				got = ans.Usage()
+				next.ServeHTTP(w, r)
+			})
+		serve(mw(d), getRequest())
+		gt.Bool(t, d.called).True()
+		gt.Value(t, got).Equal(semgate.Usage{})
+	})
+
+	t.Run("nil answers", func(t *testing.T) {
+		var ans *semgate.Answers
+		mustPanic(t, func() { _ = ans.Usage() })
+	})
 }
